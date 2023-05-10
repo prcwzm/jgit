@@ -26,6 +26,9 @@ public class Main {
             formatter.format(commit.getParent(0), commit);
             String diff = out.toString(StandardCharsets.UTF_8.name());
             System.out.println(diff);
+
+            //add
+
         }
     }
 
