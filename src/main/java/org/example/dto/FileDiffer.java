@@ -17,6 +17,7 @@ public class FileDiffer {
         // Extract filename and print
         String[] lines = defferSource.split("\n");
         this.fileName = lines[0].substring("diff --git a/".length());
+        this.deffer = defferSource;
         // Extract code changes and print
         StringBuilder codeChanges = new StringBuilder();
         for (int i = 4; i < lines.length; i++) {
