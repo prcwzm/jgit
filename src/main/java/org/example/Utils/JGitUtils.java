@@ -59,6 +59,7 @@ public class JGitUtils {
             // Get the commit objects for Branch A and Branch B
             ObjectId commitIdA = git.getRepository().resolve("refs/heads/main");
             ObjectId commitIdB = git.getRepository().resolve("refs/heads/main");
+
             RevCommit commitA = git.getRepository().parseCommit(commitIdA);
             RevCommit commitB = git.getRepository().parseCommit(commitIdB);
 
