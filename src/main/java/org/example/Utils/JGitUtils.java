@@ -2,22 +2,31 @@ package org.example.Utils;
 
 //import com.intellij.openapi.actionSystem.AnActionEvent;
 //import com.intellij.openapi.project.Project;
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.example.dto.JGitDiffer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 
+@Slf4j
 public class JGitUtils {
     /**
      * 获取当前 JGit目录
@@ -150,5 +159,105 @@ public class JGitUtils {
         }
         return branch;
     }
+
+    public static File gitShow(String commitId, String filePath) {
+        try (Git git = Git.open(new File(""))) {
+            // Get the repository
+            Repository repository = git.getRepository();
+
+            // Create the git show command
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            try (RevWalk revWalk = new RevWalk(repository);
+                 TreeWalk treeWalk = new TreeWalk(repository)) {
+
+                ObjectId commitObjectId = repository.resolve(commitId);
+                if (commitObjectId == null) {
+                    throw new IllegalArgumentException("Invalid commit ID: " + commitId);
+                }
+
+                RevCommit commit = revWalk.parseCommit(commitObjectId);
+                RevTree tree = commit.getTree();
+                treeWalk.addTree(tree);
+                treeWalk.setRecursive(true);
+                treeWalk.setFilter(PathFilter.create(filePath));
+
+                if (!treeWalk.next()) {
+                    throw new IllegalArgumentException("File not found in commit: " + filePath);
+                }
+
+                ObjectId objectId = treeWalk.getObjectId(0);
+                ObjectLoader loader = repository.open(objectId);
+                // Output the content of the file
+                loader.copyTo(out);
+            }
+
+            return createTempFile(out.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    private static File createTempFile(String content) throws IOException {
+        File tempFile = File.createTempFile("previousFile", ".tmp");
+        tempFile.deleteOnExit();
+        try (FileWriter writer = new FileWriter(tempFile);){
+            writer.write(content);
+            return tempFile;
+        }
+
+    }
+
+    public static JGitDiffer getCommitDiffer(Git git, ObjectId commitIdA, ObjectId commitIdB, String mainBranchName, String refBranchName) {
+        JGitDiffer jGitDiffer = null;
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream();
+             DiffFormatter formatter = new DiffFormatter(out)){
+
+            // Get the commit objects for Branch B and Commit B
+            gitCheck(git,refBranchName,commitIdB);
+            RevCommit commitB = new RevWalk(git.getRepository()).parseCommit(commitIdB);
+
+            // Get the commit objects for Branch A and Commit A
+            gitCheck(git,mainBranchName,commitIdA);
+            RevCommit commitA = new RevWalk(git.getRepository()).parseCommit(commitIdA);
+
+            // Print code changes between Commit A and Commit B
+            formatter.setRepository(git.getRepository());
+            formatter.format(commitA, commitB);
+            String diff = out.toString(StandardCharsets.UTF_8.name());
+            return new JGitDiffer(diff);
+        } catch (Exception e) {
+            log.error("e",e);
+            return null;
+        }
+    }
+
+    public static boolean gitCheck(Git git, String branchName, ObjectId commitId) {
+        try {
+            // Get the repository
+            Repository repository = git.getRepository();
+
+            // Create the revwalk for the given branch
+            Ref branchRef = repository.exactRef(branchName);
+            RevWalk revWalk = new RevWalk(repository);
+            RevCommit branchCommit = revWalk.parseCommit(branchRef.getObjectId());
+
+            // Check if the given commit exists in the branch
+            Iterable<RevCommit> commitsIterable = git.log()
+                    .addRange(commitId, branchCommit)
+                    .call();
+            Iterator<RevCommit> commitsIterator = commitsIterable.iterator();
+            if (commitsIterator.hasNext()) {
+                return true;
+            }
+        } catch (Exception e) {
+            log.error("e", e);
+        }
+
+        return false;
+    }
+
+
 
 }

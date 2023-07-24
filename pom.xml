@@ -20,6 +20,11 @@
             <version>1.7.26</version>
         </dependency>
         <dependency>
+            <groupId>com.github.javaparser</groupId>
+            <artifactId>javaparser-symbol-solver-core</artifactId>
+            <version>3.23.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>RELEASE</version>
@@ -31,13 +36,20 @@
             <version>1.18.22</version>
             <scope>compile</scope>
         </dependency>
-    </dependencies><build><plugins>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.22</version>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
+    <build><plugins>
     <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-            <source>7</source>
-            <target>7</target>
+            <source>8</source>
+            <target>8</target>
         </configuration>
     </plugin>
 </plugins>
